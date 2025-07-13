@@ -28,7 +28,7 @@ from indicators import (
 )
 
 # --- Logging ---
-log_file_path = "/var/www/forex-trader/logs/grok-4.log"
+log_file_path = "grok-4.log"
 os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 logging.basicConfig(filename=log_file_path, level=logging.INFO, format="%(asctime)s - %(message)s")
 
@@ -43,7 +43,7 @@ OANDA_ENV = os.getenv("OANDA_ENV", "practice")
 XAI_API_KEY = os.getenv("GROK_API_KEY")
 
 # --- Constants ---
-PROMPT_PATH = "/var/www/forex-trader/prompts/predator.json"
+PROMPT_PATH = "prompt.json" # This is the prompt we will inject indicator data into and feed to Grok
 MODEL_NAME = "Grok-4"
 SYMBOL = "GBP_JPY"
 OANDA_URL = "https://api-fxpractice.oanda.com/v3" if OANDA_ENV == "practice" else "https://api-fxtrade.oanda.com/v3"
