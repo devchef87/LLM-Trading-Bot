@@ -13,7 +13,7 @@ from xai_sdk import Client, user, system
 sys.path.append(os.path.abspath("/var/www/forex-trader/helpers"))
 
 # Your DB Connection, storing decisions etc..
-from db_query import get_db_connection
+from db_query import ...
 
 # import our indicators
 from indicators import (
@@ -21,7 +21,8 @@ from indicators import (
     get_todays_news,
     get_all_tf_sr_liquidity,
     get_best_bid_ask,
-    fetch_oanda_bid_ask
+    fetch_oanda_bid_ask,
+    get_db_connection
 )
 
 # --- Logging ---
@@ -129,7 +130,7 @@ def ai_analysis(prompt):
     try:
         client = Client(api_key=XAI_API_KEY)
         chat = client.chat.create(model="grok-4-latest", temperature=0.7)
-        chat.append(system("You are a disciplined, data-driven crypto trading AI. Respond ONLY in JSON."))
+        chat.append(system("You are a disciplined, data-driven forex trading AI. Respond ONLY in JSON."))
         chat.append(user(prompt))
 
         response = chat.sample()
