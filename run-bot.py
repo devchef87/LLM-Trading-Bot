@@ -12,13 +12,10 @@ from xai_sdk import Client, user, system
 # Add the parent directory to the module search path
 sys.path.append(os.path.abspath("/var/www/forex-trader/helpers"))
 
-from db_query import (
-    handle_paper_position,
-    load_prompt_file,
-    save_ai_memory,
-    get_db_connection
-)
+# Your DB Connection, storing decisions etc..
+from db_query import get_db_connection
 
+# import our indicators
 from indicators import (
     run_session_orb,
     get_todays_news,
@@ -33,21 +30,29 @@ os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
 logging.basicConfig(filename=log_file_path, level=logging.INFO, format="%(asctime)s - %(message)s")
 
 # --- Load ENV ---
-env_path = "/var/www/html/sec/.env"
+env_path = "/path/to/.env"
 load_dotenv(dotenv_path=env_path)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OANDA_ACCOUNT_ID = os.getenv("OANDA_ACCOUNT_ID_PREDATOR")
-OANDA_KEY = os.getenv("OANDA_DEMO_KEY")
-OANDA_ENV = os.getenv("OANDA_ENV", "practice")
 XAI_API_KEY = os.getenv("GROK_API_KEY")
 
 # --- Constants ---
 PROMPT_PATH = "prompt.json" # This is the prompt we will inject indicator data into and feed to Grok
 MODEL_NAME = "Grok-4"
 SYMBOL = "GBP_JPY"
+
+# I trade Oanda, update to whatever exchange you use
+OANDA_ACCOUNT_ID = os.getenv("OANDA_ACCOUNT_ID_PREDATOR")
+OANDA_KEY = os.getenv("OANDA_DEMO_KEY")
+OANDA_ENV = os.getenv("OANDA_ENV", "practice")
 OANDA_URL = "https://api-fxpractice.oanda.com/v3" if OANDA_ENV == "practice" else "https://api-fxtrade.oanda.com/v3"
 
+# Load in json prompt
+def load_prompt_file(filename):
+    with open(filename, 'r') as f:
+        data = json.load(f)
+        return data['prompt']
+        
 # --- Suppress noisy logging ---
 for logger_name in ["httpx", "openai", "httpcore"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
@@ -69,6 +74,7 @@ def get_pricing(symbol, oanda_account_id):
         return None
 
 
+# Connect to the database and get the open trade to pass each cycle, so AI has the situational awareness
 def get_open_trade():
     """Checks for an open paper trade for the current model."""
     with get_db_connection() as conn:
@@ -79,7 +85,7 @@ def get_open_trade():
             )
             return cur.fetchone()
 
-
+# Connect to the database and feed trades back in for memory  / learning
 def get_last_closed_trades(model=MODEL_NAME, n=10):
     """Retrieves the last n closed trades for a given model."""
     with get_db_connection() as conn:
@@ -100,7 +106,7 @@ def get_last_closed_trades(model=MODEL_NAME, n=10):
                 trades.append(row)
             return trades
 
-
+# Clean up and prepare the data for open and previous trades
 def prepare_trade_for_json(trade_row):
     """Prepares a trade row for inclusion in the LLM prompt."""
     if not trade_row:
@@ -113,9 +119,9 @@ def prepare_trade_for_json(trade_row):
             trade_row[key] = float(value)
     return trade_row
 
-
+# run analysis with our prompt injected
 def ai_analysis(prompt):
-    """Sends a prompt to the Grok API and returns the JSON response."""
+
     if not XAI_API_KEY:
         logging.error("GROK_API_KEY not found in environment variables.")
         return None
@@ -145,7 +151,6 @@ def ai_analysis(prompt):
 
 
 def main():
-    """Main execution function."""
     try:
         if get_open_trade():
             logging.info("Trade already open. Skipping new AI prompt.")
@@ -163,6 +168,7 @@ def main():
         orderbook = fetch_oanda_bid_ask(SYMBOL)
         bid, ask = get_best_bid_ask(orderbook)
 
+        # this is where we inject our data into the json prompt
         prompt = prompt_template.format(
             current_trade_json=open_trade_json,
             last_closed_trade_json=last_closed_trades_json,
@@ -175,14 +181,12 @@ def main():
             ask=ask,
         )
 
+        #Review the full prompt making sure data is correct
+        logging.info(f"Raw Promp: {prompt}")
+
+        # Here you parse and decide what to do with the decision, connect to an exchange, log to DB etc..
         ai_decision = ai_analysis(prompt)
         logging.info(f"AI Decision: {ai_decision}")
-
-        if ai_decision:
-            handle_paper_position(ai_decision, MODEL_NAME, OANDA_ACCOUNT_ID, symbol=SYMBOL)
-            save_ai_memory(MODEL_NAME, "1h", ai_decision)
-        else:
-            logging.error("AI decision was None, skipping trade record.")
 
     except Exception as e:
         logging.error(f"Error in main(): {e}", exc_info=True)
