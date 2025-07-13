@@ -7,7 +7,7 @@ import pytz
 from datetime import datetime, time, timedelta, timezone
 
 # --- Load ENV ---
-env_path = "/var/www/html/sec/.env"
+env_path = "/path/to/.env"
 load_dotenv(dotenv_path=env_path)
 
 # --- Database Credentials ---
