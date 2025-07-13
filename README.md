@@ -31,13 +31,20 @@ This repo is **not a plug-and-play trading solution**, but a reference implement
 
 ## Example Output
 
-The bot produces output like:
+Each cycle, the bot emits a JSON object like this:
+
 ```json
 {
-  "side": "BUY",
-  "decision": "ENTER",
-  "stop_loss": 185.10,
-  "take_profit": 187.90,
-  "confidence": 0.92,
-  "reason": "Price swept liquidity at S/R zone, strong volume confirmation."
+  "action": "ENTER",         // "ENTER", "EXIT", or "HOLD"
+  "side": "LONG",            // "LONG", "SHORT", or null
+  "price": 186.25,           // Entry/exit price, float
+  "stop_loss": 185.75,       // For "ENTER" only, float
+  "take_profit": 188.00,     // For "ENTER" only, float
+  "status": "OPEN",          // "OPEN" or "CLOSED"
+  "risk_reward": 2.5,        // For "ENTER" only, float
+  "reason": "Price swept 1h S/R zone, then rejected with high volume. Multi-timeframe confluence (4h/1h), liquidity grab confirmed. Recent trades show bias long, news neutral.",
+  "save_memory": "Session break chop—avoid re-entry during low liquidity next time.",
+  "strategy": "Enter long after liquidity sweep and rejection at 1h S/R zone; exit if zone lost.",
+  "confidence": 78,          // Integer, only "ENTER" if ≥60
+  "request": null            // Null or string for needed data
 }
