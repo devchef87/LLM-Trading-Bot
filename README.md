@@ -47,5 +47,5 @@ Each cycle, the bot emits a JSON object like this:
   "save_memory": "Session break chop—avoid re-entry during low liquidity next time.",
   "strategy": "Enter long after liquidity sweep and rejection at 1h S/R zone; exit if zone lost.",
   "confidence": 78,
-  "request": null
+  "request": "Add daily candles for higher TF analysis"
 }
